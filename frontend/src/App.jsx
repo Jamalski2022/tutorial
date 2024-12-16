@@ -1,66 +1,3 @@
-// import { useState, useEffect } from 'react'
-// import ContactList from './ContactList'
-// import './App.css'
-// import ContactForm from './ContactForm'
-
-
-// function App() {
-//   const [contacts, setContacts] = useState([]);
-//   const [isModalOpen, setIsModalOpen] = useState(false);
-//   const [currentContact, setCurrentContact] = useState({})
-
-//   useEffect(() => {
-//     fetchContacts()
-//   }, [])
-
-//   const fetchContacts = async () => {
-//     const response = await fetch("http://127.0.0.1:5000/contacts");
-//     const data = await response.json();
-//     setContacts(data.contacts);
-
-//   };
-
-//   const closeModal = () => {
-//     setIsModalOpen(false)
-//     setCurrentContact({})
-//   }
-
-//   const openCreateModal = () => {
-//     if (!isModalOpen) setIsModalOpen(true)
-//   }
-
-//   const openEditModale = (contact) => {
-//     if (isModalOpen) return
-//     setCurrentContact(contact)
-//     setIsModalOpen(true)
-//   }
-
-//   const onUpdate = () => {
-//     closeModal()
-//     fetchContacts()
-//   }
-
-//   return ( 
-//   <>
-//   <ContactList contacts={contacts} updateContact={openEditModale} updateCallback={onUpdate}/>
-//   <button onClick={openCreateModal}>Create New Contact</button>
-//   {
-//     isModalOpen && <div className='modal'>
-//       <div className='modal-content'>
-//         <span className='close' onClick={closeModal}>&times;</span>
-//       <ContactForm existingContact={currentContact} updateCallback={onUpdate}/>
-//       </div>
-      
-//     </div>
-//   }
-  
-//   </>
-//   );
-// }
-
-// export default App
-
-
 import { useState, useEffect } from 'react'
 import ContactList from './ContactList'
 import CompanyList from './CompanyList'
@@ -68,6 +5,8 @@ import DepartmentList from './DepartmentList'
 import ContactForm from './ContactForm'
 import CompanyForm from './CompanyForm'
 import DepartmentForm from './DepartmentForm'
+import LoginForm from './LoginForm'
+import SignupForm from './SignupForm'
 import './App.css'
 
 function App() {
@@ -75,6 +14,10 @@ function App() {
   const [contacts, setContacts] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [departments, setDepartments] = useState([]);
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+  const [activeForm, setActiveForm] = useState('login');
   
   // Modal states
   const [activeEntity, setActiveEntity] = useState('contacts');
@@ -86,6 +29,11 @@ function App() {
     fetchContacts();
     fetchCompanies();
     fetchDepartments();
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      // Verify token with backend
+      verifyToken(token);
+    }
   }, [])
 
   const fetchContacts = async () => {
@@ -105,6 +53,59 @@ function App() {
     const data = await response.json();
     setDepartments(data.departments);
   };
+
+  const verifyToken = async (token) => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/protected", {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.status === 200) {
+        const data = await response.json();
+        setUser(data.user);
+        setIsAuthenticated(true);
+      } else {
+        // Token invalid, remove it
+        localStorage.removeItem('access_token');
+      }
+    } catch (error) {
+      console.error("Token verification failed", error);
+      localStorage.removeItem('access_token');
+    }
+  };
+
+  const handleLogin = (userData, token) => {
+    localStorage.setItem('access_token', token);
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    setUser(null);
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="auth-container">
+        {activeForm === 'login' ? (
+          <LoginForm 
+            onLogin={handleLogin} 
+            switchToSignup={() => setActiveForm('signup')}
+          />
+        ) : (
+          <SignupForm 
+            onSignup={handleLogin} 
+            switchToLogin={() => setActiveForm('login')}
+          />
+        )}
+      </div>
+    );
+  }
+
 
   // Modal control functions
   const closeModal = () => {
@@ -167,6 +168,7 @@ function App() {
 
   return ( 
   <div className="app-container">
+    <button onClick={handleLogout}>Logout</button>
     <div className="navigation">
       <button onClick={() => openCreateModal('contacts')}>Manage Contacts</button>
       <button onClick={() => openCreateModal('companies')}>Manage Companies</button>
