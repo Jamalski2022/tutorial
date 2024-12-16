@@ -1,5 +1,8 @@
 flask
-flask-sqlalchemy
+sqlalchemy==1.4.46
+flask-sqlalchemy==2.5.1
 flask-migrate
 marshmallow-sqlalchemy
 gunicorn
+flask-jwt-extended
+werkzeug==2.2.3
